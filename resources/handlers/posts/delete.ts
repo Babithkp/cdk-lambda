@@ -6,7 +6,7 @@ const dynamodb = new DynamoDB({});
 export async function deletePost({ id }: { id: string }) {
   await dynamodb.send(
     new DeleteCommand({
-      TableName: "post",
+      TableName: process.env.TABLE_NAME,
       Key: {
         pk: `POST#${id}`,
       },

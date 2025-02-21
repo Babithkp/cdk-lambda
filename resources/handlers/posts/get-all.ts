@@ -6,7 +6,7 @@ const dynamodb = new DynamoDB({});
 export async function getAll() {
   const result = await dynamodb.send(
     new ScanCommand({
-      TableName: "post",
+      TableName: process.env.TABLE_NAME,
     })
   );
 

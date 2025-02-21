@@ -7,7 +7,7 @@ export async function getOne({ id }: { id: string }) {
   // Get the post from DynamoDB
   const result = await dynamodb.send(
     new GetCommand({
-      TableName: "post",
+      TableName: process.env.TABLE_NAME,
       Key: {
         pk: `POST#${id}`,
       },
