@@ -1,3 +1,0 @@
-CdkLamdaDynamodbStack.APIKeyID = i3xf75n6kd
-CdkLamdaDynamodbStack.RestAPIEndpointB14C3C54 = https://njfsx5otk4.execute-api.ap-southeast-2.amazonaws.com/prod/
-"value": "tfoVvabrED3L0USqLUSqp86sOBq44oN56P9TU8E7",

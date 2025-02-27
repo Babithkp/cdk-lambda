@@ -11,34 +11,34 @@ import {
   UsagePlan,
 } from 'aws-cdk-lib/aws-apigateway';
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import * as path from "path";
+
 
 export class CdkLamdaDynamodbStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // 1. Create our DynamoDB table
     const dbTable = new Table(this, "DbTable", {
       partitionKey: { name: "pk", type: AttributeType.STRING },
       removalPolicy: RemovalPolicy.DESTROY,
       billingMode: BillingMode.PAY_PER_REQUEST,
     });
 
-    // 2. Create our API Gateway
-    const api = new RestApi(this, 'RestAPI', {
-      restApiName: 'RestAPI',
+    const api = new RestApi(this, "RestAPI", {
+      restApiName: "RestAPI",
       defaultCorsPreflightOptions: {
         allowOrigins: Cors.ALL_ORIGINS,
         allowMethods: Cors.ALL_METHODS,
+        allowHeaders: ["*"],
+        
       },
       apiKeySourceType: ApiKeySourceType.HEADER,
     });
 
-    // 3. Create our API Key
-    const apiKey = new ApiKey(this, 'ApiKey');
+    const apiKey = new ApiKey(this, "ApiKey");
 
-    // 4. Create a usage plan and add the API key to it
-    const usagePlan = new UsagePlan(this, 'UsagePlan', {
-      name: 'Usage Plan',
+    const usagePlan = new UsagePlan(this, "UsagePlan", {
+      name: "Usage Plan",
       apiStages: [
         {
           api,
@@ -49,52 +49,75 @@ export class CdkLamdaDynamodbStack extends cdk.Stack {
 
     usagePlan.addApiKey(apiKey);
 
-    // 5. Create our Lambda functions to handle requests
-    const postsLambda = new NodejsFunction(this, 'PostsLambda', {
-      entry: 'resources/endpoints/posts.ts',
-      handler: 'handler',
+
+  
+    const getTasksLambda = new NodejsFunction(this, "getTasksLambda", {
+      entry: path.join(__dirname, "../resources/endpoints/getTasks.ts"),
+      handler: "handler",
       environment: {
         TABLE_NAME: dbTable.tableName,
       },
     });
 
-    const postLambda = new NodejsFunction(this, 'PostLambda', {
-      entry: 'resources/endpoints/post.ts',
-      handler: 'handler',
+    const updateTaskLambda = new NodejsFunction(this, "updateTaskLambda", {
+      entry: path.join(__dirname, "../resources/endpoints/updateTask.ts"),
+      handler: "handler",
       environment: {
         TABLE_NAME: dbTable.tableName,
       },
     });
 
-    // 6. Grant our Lambda functions access to our DynamoDB table
-    dbTable.grantReadWriteData(postsLambda);
-    dbTable.grantReadWriteData(postLambda);
-
-    // 7. Define our API Gateway endpoints
-    const posts = api.root.addResource('posts');
-    const post = posts.addResource('{id}');
-
-    // 8. Connect our Lambda functions to our API Gateway endpoints
-    const postsIntegration = new LambdaIntegration(postsLambda);
-    const postIntegration = new LambdaIntegration(postLambda);
-
-    // 9. Define our API Gateway methods
-    posts.addMethod('GET', postsIntegration, {
-      apiKeyRequired: true,
-    });
-    posts.addMethod('POST', postsIntegration, {
-      apiKeyRequired: true,
+    const deleteTaskLambda = new NodejsFunction(this, "deleteTaskLambda", {
+      entry: path.join(__dirname, "../resources/endpoints/deleteTask.ts"),
+     
+      handler: "handler",
+      environment: {
+        TABLE_NAME: dbTable.tableName,
+      },
     });
 
-    post.addMethod('GET', postIntegration, {
-      apiKeyRequired: true,
+    const addTaskLambda = new NodejsFunction(this, "addTaskLambda", {
+      entry: path.join(__dirname, "../resources/endpoints/addTask.ts"),
+      handler: "handler",
+      environment: {
+        TABLE_NAME: dbTable.tableName,
+      },
     });
-    post.addMethod('DELETE', postIntegration, {
+
+
+    dbTable.grantReadWriteData(getTasksLambda);
+    dbTable.grantFullAccess(updateTaskLambda);
+    dbTable.grantFullAccess(deleteTaskLambda);
+    dbTable.grantReadWriteData(addTaskLambda);
+
+
+    const gettasks = api.root.addResource("gettasks");
+    const addTask = api.root.addResource("addTask");
+    const deleteTask = api.root.addResource("deleteTask").addResource("{id}");
+    const updateTask = api.root.addResource("updateTask").addResource("{id}");
+
+    const getTasksIntegration = new LambdaIntegration(getTasksLambda);
+    const updateTaskIntegration = new LambdaIntegration(updateTaskLambda);
+    const deleteTaskIntegration = new LambdaIntegration(deleteTaskLambda);
+    const addTaskIntegration = new LambdaIntegration(addTaskLambda);
+
+    gettasks.addMethod("GET", getTasksIntegration, {
       apiKeyRequired: true,
     });
 
-    // Misc: Outputs
-    new CfnOutput(this, 'API Key ID', {
+    addTask.addMethod("POST", addTaskIntegration, {
+      apiKeyRequired: true,
+    });
+
+    deleteTask.addMethod("DELETE", deleteTaskIntegration, {
+      apiKeyRequired: true,
+    });
+
+    updateTask.addMethod("PUT", updateTaskIntegration, {
+      apiKeyRequired: true,
+    });
+
+    new CfnOutput(this, "API Key ID", {
       value: apiKey.keyId,
     });
   }
